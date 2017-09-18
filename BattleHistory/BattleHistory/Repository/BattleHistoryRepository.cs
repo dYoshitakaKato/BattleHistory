@@ -22,7 +22,7 @@ namespace BattleHistory.Repository
             int count = 1;
             using (BattleHistoryDBContext context = new BattleHistoryDBContext())
             {
-                count = context.BattleHistories.Select(x => x.SortieCount).Max();
+                count = context.BattleHistories.Select(x => x.SortieCount).Max(x => x + 1);
             }
             return count;
         }
