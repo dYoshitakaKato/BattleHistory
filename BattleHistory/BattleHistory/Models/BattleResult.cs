@@ -8,15 +8,16 @@ using Grabacr07.KanColleWrapper.Models.Raw;
 
 namespace BattleHistory.Models
 {
-    class BattleResult : RawDataWrapper<kcsapi_battleresult>
+    public class BattleResult : RawDataWrapper<kcsapi_battleresult>
     {
         internal BattleResult(kcsapi_battleresult rawData) : base(rawData)
         {
-            getShip = new GetShip(rawData.api_get_ship);
+            GetShip = rawData.api_get_ship == null 
+                ? new GetShip(rawData.api_get_ship) : null;
         }
 
         public string WinRank => this.RawData.api_win_rank;
 
-        public GetShip getShip;
+        public GetShip GetShip { get; }
     }
 }

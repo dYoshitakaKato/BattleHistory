@@ -7,23 +7,20 @@ using Grabacr07.KanColleWrapper.Models.Raw;
 
 namespace BattleHistory.Models
 {
-    class GetShip
+    public class GetShip
     {
-        private kcsapi_battleresult_getship api_get_ship;
+        public int Id { get ;}
+        public string Name { get; }
 
-        private int id { get;}
-        private string name { get; }
-
-        public GetShip(int id = 0, string name = null)
+        internal GetShip(int id = 0, string name = null)
         {
-            this.id = id;
-            this.name = name;
+            Id = id;
+            Name = name;
         }
 
 
-        public GetShip(kcsapi_battleresult_getship api_get_ship)
-            :this(api_get_ship == null ? api_get_ship.api_ship_id : 0, 
-                 api_get_ship == null ? api_get_ship.api_ship_name : null)
+        internal GetShip(kcsapi_battleresult_getship api_get_ship)
+            :this( api_get_ship.api_ship_id , api_get_ship.api_ship_name)
         {
         }
     }
