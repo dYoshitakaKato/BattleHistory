@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Nekoxy;
 using Grabacr07.KanColleWrapper.Models.Raw;
 using BattleHistory.Models;
+using BattleHistory.Repository;
 
 namespace BattleHistory
 {
@@ -24,36 +25,29 @@ namespace BattleHistory
     [ExportMetadata("Description", "")]
     [ExportMetadata("Version", "0.0")]
     [ExportMetadata("Author", "日和")]
-    class BattleHistory : IPlugin, ITool, IDisposableHolder
+    class StartUp : IPlugin, ITool, IDisposableHolder
     {
-        private bool initialized;
-
         string ITool.Name => "BattleHistory";
 
         object ITool.View => new UserControl1();
 
-        private readonly MultipleDisposable compositDisposable = new MultipleDisposable();
-        private readonly List<IDisposable> fleetHandlers = new List<IDisposable>();
-        public void Dispose() => this.compositDisposable.Dispose();
-        ICollection<IDisposable> IDisposableHolder.CompositeDisposable => this.compositDisposable;
+        private readonly MultipleDisposable _CompositDisposable = new MultipleDisposable();
+        private readonly List<IDisposable> _FleetHandlers = new List<IDisposable>();
+        public void Dispose() => this._CompositDisposable.Dispose();
+        ICollection<IDisposable> IDisposableHolder.CompositeDisposable => this._CompositDisposable;
+        private BattleHistoryRepository _Repository = new BattleHistoryRepository();
 
         public void Initialize()
         {
             KanColleClient.Current
-                .Subscribe(nameof(KanColleClient.IsStarted), () => InitializeCore(), false)
+                .Subscribe(nameof(KanColleClient.IsStarted), () => Initialize(KanColleClient.Current.Homeport), false)
                 .AddTo(this);
         }
 
-        public void InitializeCore()
+        public void Initialize(Homeport homeport)
         {
-            var homeport = KanColleClient.Current.Homeport;
-            //var test = KanColleClient.Current.Proxy.api_req_combined_battle_battleresult;
-            var result = new Grabacr07.KanColleWrapper.Models.Raw.kcsapi_combined_battle();
-            var map = new Grabacr07.KanColleWrapper.Models.Raw.kcsapi_map_start();
-            var proxy = KanColleClient.Current.Proxy;
-
             if (homeport == null) return;
-            this.initialized = true;
+            SetDisposable(KanColleClient.Current.Proxy);
         }
 
         private void SetDisposable(KanColleProxy proxy)
@@ -64,12 +58,12 @@ namespace BattleHistory
 
         private void SetMapDisposable(KanColleProxy proxy)
         {
-            var mapStart = proxy.api_req_map_start.TryParse<kcsapi_map_start>().Subscribe(x => Update(x.Data));
-            compositDisposable.Add(mapStart);
+            var mapStart = proxy.api_req_map_start.TryParse<kcsapi_map_start>().Subscribe(x => Create(x.Data));
+            _CompositDisposable.Add(mapStart);
 
             var next = KanColleClient.Current.Proxy.ApiSessionSource.Where
                 (x => x.Request.PathAndQuery == "/kcsapi/api_req_map/next").TryParse<kcsapi_map_start>().Subscribe(x => Update(x.Data));
-            compositDisposable.Add(next);
+            _CompositDisposable.Add(next);
         }
 
         private void SetBattleResultDisposable(KanColleProxy proxy)
@@ -77,20 +71,26 @@ namespace BattleHistory
             var comBatResult = proxy.api_req_combined_battle_battleresult.TryParse<kcsapi_battleresult>().Subscribe(x => Update(x.Data));
             var batResult = proxy.api_req_sortie_battleresult.TryParse<kcsapi_battleresult>().Subscribe(x => Update(x.Data));
 
-            compositDisposable.Add(comBatResult);
-            compositDisposable.Add(batResult);
+            _CompositDisposable.Add(comBatResult);
+            _CompositDisposable.Add(batResult);
+        }
+
+        Models.BattleHistory _BattleHistory;
+
+        private void Create(kcsapi_map_start data)
+        {
+            _BattleHistory = new Models.BattleHistory(data);
         }
 
         private void Update(kcsapi_map_start data)
         {
-            Console.WriteLine("kcsapi_map_start");
+            _BattleHistory.Update(data);
         }
-
-        BattleResult btResult;
 
         private void Update(kcsapi_battleresult data)
         {
-            btResult = new BattleResult(data);
+            _BattleHistory.BattleResult = new BattleResult(data);
+            _Repository.Insert(_BattleHistory);
         }
     }
 }
