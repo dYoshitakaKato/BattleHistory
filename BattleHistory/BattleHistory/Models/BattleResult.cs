@@ -12,7 +12,7 @@ namespace BattleHistory.Models
     {
         internal BattleResult(kcsapi_battleresult rawData) : base(rawData)
         {
-            GetShip = rawData.api_get_ship == null 
+            GetShip = rawData.api_get_ship != null 
                 ? new GetShip(rawData.api_get_ship) : null;
         }
 
